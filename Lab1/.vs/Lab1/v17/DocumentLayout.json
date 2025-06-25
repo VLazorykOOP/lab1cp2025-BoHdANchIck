@@ -1,9 +1,9 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\danel\\Desktop\\SCP\\1\\Lab1\\",
+  "WorkspaceRootPath": "C:\\Users\\danel\\Desktop\\\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430\\lab1cp2025-BoHdANchIck\\Lab1\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{E8DE08AD-E8AF-4075-939E-5A0B6D34488A}|Lab1.vcxproj|C:\\Users\\danel\\Desktop\\SCP\\1\\Lab1\\Lab1.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{E8DE08AD-E8AF-4075-939E-5A0B6D34488A}|Lab1.vcxproj|C:\\Users\\danel\\Desktop\\\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430\\lab1cp2025-BoHdANchIck\\Lab1\\Lab1.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{E8DE08AD-E8AF-4075-939E-5A0B6D34488A}|Lab1.vcxproj|solutionrelative:Lab1.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
@@ -32,11 +32,11 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Lab1.cpp",
-              "DocumentMoniker": "C:\\Users\\danel\\Desktop\\SCP\\1\\Lab1\\Lab1.cpp",
+              "DocumentMoniker": "C:\\Users\\danel\\Desktop\\\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430\\lab1cp2025-BoHdANchIck\\Lab1\\Lab1.cpp",
               "RelativeDocumentMoniker": "Lab1.cpp",
-              "ToolTip": "C:\\Users\\danel\\Desktop\\SCP\\1\\Lab1\\Lab1.cpp",
+              "ToolTip": "C:\\Users\\danel\\Desktop\\\u043F\u0440\u0430\u043A\u0442\u0438\u043A\u0430\\lab1cp2025-BoHdANchIck\\Lab1\\Lab1.cpp",
               "RelativeToolTip": "Lab1.cpp",
-              "ViewState": "AgIAAJAAAAAAAAAAAAAAAJYAAAAtAAAAAAAAAA==",
+              "ViewState": "AgIAAKoAAAAAAAAAAAAAALAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-06-04T17:15:34.189Z",
               "EditorCaption": ""

@@ -1,164 +1,177 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <cmath>
-#include <algorithm>
 #include <string>
 #include <sstream>
+#include <cmath>
+#include <iomanip>
+#include <stdexcept>
 
-using namespace std;
-
-struct TableEntry {
+struct TableRow {
     double X, T, U;
 };
 
-vector<TableEntry> readTable(const string& filename) {
-    vector<TableEntry> table;
-    ifstream fin(filename);
-    if (!fin.is_open()) return table;
-    string line;
-    if (!getline(fin, line)) return table;
-    while (getline(fin, line)) {
-        for (auto& c : line) {
-            if (c == ',') c = '.';
-        }
-        if (line.empty() || (!isdigit(line.front()) && line.front() != '-' && line.front() != '+'))
-            continue;
-        istringstream iss(line);
-        TableEntry entry;
-        if (iss >> entry.X >> entry.T >> entry.U)
-            table.push_back(entry);
+std::vector<TableRow> table;
+
+std::vector<TableRow> readTable(const std::string& filename);
+double interpolate(const std::vector<TableRow>& table, double x, char col);
+double T(double x);
+double U(double x);
+
+double Gold(double x, double y);
+double Glr(double x, double y);
+double Srz(double x, double y, double z);
+double Grs(double x, double y);
+double fun1(double x, double y, double z);
+
+double Gold2(double x, double y);
+double Glr2(double x, double y);
+double Srz2(double x, double y, double z);
+double Grs2(double x, double y);
+double fun2(double x, double y, double z);
+
+double fun3(double x, double y, double z) {
+    return 1.3498 * x + 2.2362 * y - 2.348 * x * y;
+}
+
+std::vector<TableRow> readTable(const std::string& filename) {
+    std::ifstream fin(filename);
+    if (!fin) throw std::runtime_error("Cannot open file: " + filename);
+
+    std::vector<TableRow> table;
+    std::string line;
+    while (std::getline(fin, line)) {
+        std::istringstream iss(line);
+        TableRow row;
+        if (!(iss >> row.X >> row.T >> row.U)) continue;
+        table.push_back(row);
     }
+    if (table.empty()) throw std::runtime_error("File is empty: " + filename);
     return table;
 }
 
-static double interpolate(double x, double x1, double y1, double x2, double y2) {
-    if (fabs(x2 - x1) < 1e-10) return y1;
-    return y1 + (y2 - y1) * (x - x1) / (x2 - x1);
-}
-
-pair<double, double> get_TU(double x) {
-    vector<TableEntry> table;
-    string fname;
-    if (fabs(x) <= 1.0)
-        fname = "dat_X_1_1.dat";
-    else if (x < -1.0)
-        fname = "dat_X00_1.dat";
-    else if (x > 1.0)
-        fname = "dat_X1_00.dat";
-    else
-        return { NAN, NAN };
-
-    table = readTable(fname);
-    if (table.empty()) {
-        //cout << "[ERROR] Table is empty!" << endl;
-        return { NAN, NAN };
-    }
-
-    for (size_t i = 0; i + 1 < table.size(); ++i) {
-        if ((x >= table[i].X && x <= table[i + 1].X) ||
-            (x <= table[i].X && x >= table[i + 1].X)) {
-
-            double T = interpolate(x, table[i].X, table[i].T, table[i + 1].X, table[i + 1].T);
-            double U = interpolate(x, table[i].X, table[i].U, table[i + 1].X, table[i + 1].U);
-            //cout << "[INFO] Interpolation: x = " << x << ", T = " << T << ", U = " << U << endl;
-            return { T, U };
+double interpolate(const std::vector<TableRow>& table, double x, char col) {
+    for (size_t i = 1; i < table.size(); ++i) {
+        double x0 = table[i - 1].X, x1 = table[i].X;
+        double y0 = (col == 'T') ? table[i - 1].T : table[i - 1].U;
+        double y1 = (col == 'T') ? table[i].T : table[i].U;
+        if ((x0 <= x && x <= x1) || (x1 <= x && x <= x0)) {
+            if (x1 == x0) return y0;
+            return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
         }
     }
-
-    //cout << "[WARN] x = " << x << " is out of table range" << endl;
-    return { NAN, NAN };
+    if (x < table.front().X)
+        return (col == 'T') ? table.front().T : table.front().U;
+    if (x > table.back().X)
+        return (col == 'T') ? table.back().T : table.back().U;
+    throw std::runtime_error("Interpolation error: x out of bounds");
 }
 
+double T(double x) {
+    return interpolate(table, x, 'T');
+}
+double U(double x) {
+    return interpolate(table, x, 'U');
+}
 
+void selectTable(double x) {
+    std::string fname;
+    if (std::abs(x) <= 1.0) fname = "dat_X_1_1.dat";
+    else if (x < -1.0) fname = "dat_X00_1.dat";
+    else if (x > 1.0) fname = "dat_X1_00.dat";
+    else throw std::runtime_error("Cannot select table for x");
+    table = readTable(fname);
+}
 
 double Srz(double x, double y, double z) {
-    if (x > y) {
-        auto Tx = get_TU(x).first;
-        auto Uz = get_TU(z).second;
-        auto Ty = get_TU(y).first;
-        if (isnan(Tx) || isnan(Uz) || isnan(Ty)) return NAN;
-        return Tx + Uz - Ty;
-    }
-    else {
-        auto Ty = get_TU(y).first;
-        auto Uy = get_TU(y).second; 
-        auto Uz = get_TU(z).second;
-        if (isnan(Ty) || isnan(Uz) || isnan(Uy)) return NAN;
-        return Ty + Uy - Uz;     
-    }
+    double denom = (T(y) + U(y) - U(z));
+    if (fabs(denom) < 1e-12) throw std::runtime_error("Srz: denominator is zero");
+    return (T(x) + U(z) - T(y)) / denom;
 }
 double Gold(double x, double y) {
-    if (y != 0) {
-        if (x > y) return x / y;
-        if (x < y) return y / x;
-    }
-    return NAN;
+    if (x > y && y == 0) throw std::runtime_error("Gold: y=0, x>y, needs recalculation");
+    if (x < y && x == 0) throw std::runtime_error("Gold: x=0, x<y, needs recalculation");
+    if (x > y) return x * y;
+    if (x < y) return x / y;
+    return 0.0;
 }
-
 double Glr(double x, double y) {
-    if (fabs(x) < 1) return x;
-    if (fabs(y) >= 1 && fabs(y) < 1) return y;
-    double val = y / sqrt(x * x + y * y - 4);
-    if (fabs(y) >= 1 && (x * x + y * y - 4) > 0.1) return val;
-    if ((x * x + y * y - 4) < 0.1) return NAN;
-    return NAN;
+    if (fabs(x) < 1.0) return x;
+    if (fabs(y) < 1.0) return y;
+    double rad = x * x + y * y - 4.0;
+    if (fabs(x) >= 1.0 && fabs(y) >= 1.0 && rad > 0.1) return sqrt(rad);
+    throw std::runtime_error("Glr: arguments not in allowed range");
 }
-
 double Grs(double x, double y) {
-    double s1 = 0.1389 * Srz(x + y, Gold(x, y), Glr(x, x * y));
-    double s2 = 1.8389 * Srz(x - y, Gold(y, x / 5), Glr(5 * x, Gold(5 * y, y)));
-    return s1 + s2 * 0.83;
+    return 0.1389 * Srz(x + y, Gold(x, y), Glr(x, x * y)) +
+        1.8389 * Srz(x - y, Gold(y, x / 5.0), Glr(5.0 * x, x * y)) +
+        0.33 * Srz(x - 0.9, Glr(y, x / 5.0), Gold(5.0 * y, y));
 }
-
-double fun2(double x, double y, double z) {
-    auto Grsl = [](double a, double b) {
-        double s1 = 0.14 * Srz(a + b, Gold(a, b), Glr(a, a * b));
-        double s2 = 1.83 * Srz(a - b, Gold(b, a / 5), Glr(4 * a, Gold(4 * b, b)));
-        return s1 + s2 * 0.83;
-        };
-    double result = x * Grsl(x, y) + y * Grsl(y, z) + z * Grsl(z, x);
-    return result;
-}
-
-double fun3(double x, double y, double z) {
-    return 1.3498 * z + 2.2362 * y - 2.348 * x * y;
-}
-
 double fun1(double x, double y, double z) {
-    auto Grs1 = [&](double a, double b) {
-        double gold = Gold(a, b);
-        if (isnan(gold)) return fun2(x, y, z);
-        double glr = Glr(a, b);
-        if (isnan(glr)) return fun2(x, y, z);
-        return Grs(a, b);
-        };
-    double val = x * x * Grs1(y, z) + y * y * Grs1(x, z) + 0.33 * x * y * Grs1(x, z);
-    return val;
+    return x * x * Grs(y, z) + y * y * Grs(x, z) + 0.33 * x * y * Grs(x, z);
+}
+
+double Srz2(double x, double y, double z) {
+    double denom = (T(y) + U(y) - U(z));
+    if (fabs(denom) < 1e-12) throw std::runtime_error("Srz2: denominator is zero");
+    return (T(x) + U(z) - T(y)) / denom;
+}
+double Gold2(double x, double y) {
+    if (y > 0.1 && x > y) return x / y;
+    if (y > 0.1 && x <= y) return 0.15;
+    if (y == 0) return 0.1;
+    return 0.0;
+}
+double Glr2(double x, double y) {
+    if (fabs(x) < 1.0) return x;
+    if (fabs(y) < 1.0) return y;
+    return 0.0;
+}
+double Grs2(double x, double y) {
+    return 0.14 * Srz2(x + y, Gold2(x, y), Glr2(x, x * y)) +
+        1.83 * Srz2(x - y, Gold2(y, x / 5.0), Glr2(4.0 * x, x * y)) +
+        0.33 * Srz2(x, Glr2(y, x / 4.0), Gold2(4.0 * y, y));
+}
+double fun2(double x, double y, double z) {
+    return x * Grs2(x, y) + y * Grs2(y, z) + z * Grs2(z, x);
 }
 
 double fun(double x, double y, double z) {
-    double result = fun1(x, y, z);
-    if (!isnan(result)) {
-        //cout << "[DEBUG] Using fun1()" << endl;
-        return result;
+    try {
+        selectTable(x);
     }
-    result = fun2(x, y, z);
-    if (!isnan(result)) {
-        //cout << "[DEBUG] Using fun2()" << endl;
-        return result;
+    catch (const std::exception& e) {
+        std::cerr << "File not opened: " << e.what() << "\n";
+        return fun3(x, y, z);
     }
-    //cout << "[DEBUG] Using fun3()" << endl;
-    return fun3(x, y, z);
-}
 
+    try {
+        return fun1(x, y, z);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "fun1 failed: " << e.what() << "\n";
+        try {
+            return fun2(x, y, z);
+        }
+        catch (const std::exception& e2) {
+            std::cerr << "fun2 failed: " << e2.what() << "\n";
+            return fun3(x, y, z);
+        }
+    }
+}
 
 int main() {
     double x, y, z;
-    cout << "Enter x, y, z: ";
-    cin >> x >> y >> z;
+    std::cout << "Enter x, y, z: ";
+    std::cin >> x >> y >> z;
 
-    double res = fun(x, y, z);
-    cout << "fun(x, y, z) = " << res << endl;
+    try {
+        double res = fun(x, y, z);
+        std::cout << "fun(x, y, z) = " << std::setprecision(10) << res << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+
     return 0;
 }
